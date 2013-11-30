@@ -2,29 +2,99 @@
 <script src='vendor/three.js/build/three.js'></script>
 <script src="vendor/require.js/require.js"></script>
 <body style='margin: 0px; background-color: #bbbbbb;overflow: hidden;'><script>
-require([], function(){
+require([ 'bower_components/threex.grassground/package.require'
+	, 'bower_components/threex.dynamictexture/package.require'
+	, 'bower_components/threex.skymap/package.require'
+	], function(){
 	var renderer	= new THREE.WebGLRenderer();
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	document.body.appendChild( renderer.domElement );
 
 	var updateFcts	= [];
 	var scene	= new THREE.Scene();
-	var camera	= new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100 );
-	camera.position.z = 3;
+	var camera	= new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000 );
+	camera.position.z = 6;
+
+	var mesh	= THREEx.createSkymap('skybox')
+	scene.add( mesh )	
+	
+	//////////////////////////////////////////////////////////////////////////////////
+	//		comment								//
+	//////////////////////////////////////////////////////////////////////////////////
+
+	function buildDomainTower(domain, height){
+		//////////////////////////////////////////////////////////////////////////////////
+		//		add tower								//
+		//////////////////////////////////////////////////////////////////////////////////
+		
+		var geometry	= new THREE.CubeGeometry( 0.2, height, 0.2);
+		var material	= new THREE.MeshNormalMaterial();
+		var mesh	= new THREE.Mesh( geometry, material );
+		scene.add( mesh );
+		
+		mesh.position.x	= (Math.random()-0.5) * 3
+		mesh.position.y	= height/2 
+		mesh.position.z	= (Math.random()-0.5) * 3
+		
+		
+		//////////////////////////////////////////////////////////////////////////////////
+		//		add sprite label						//
+		//////////////////////////////////////////////////////////////////////////////////
+		
+		var dynamicTexture	= new THREEx.DynamicTexture(1024,256)
+		dynamicTexture.context.font	= "bolder 128px Verdana";	
+		dynamicTexture.clear('rgba(1,1,1,0.2)')
+			.drawText(domain, undefined, 128+32, 'white')
+
+		var geometry	= new THREE.PlaneGeometry(1, 0.5);
+		var material	= new THREE.MeshBasicMaterial({
+			map		: dynamicTexture.texture,
+			transparent	: true
+		})
+		var sprite	= new THREE.Mesh( geometry, material );
+		sprite.position.x	= mesh.position.x
+		sprite.position.y	= height+0.3*0.5
+		sprite.position.z	= mesh.position.z
+		sprite.scale.multiplyScalar(0.5)
+		scene.add( sprite );
+		updateFcts.push(function(delta, now){
+			sprite.lookAt(camera.position)	
+		})
+		
+	}
 
 	//////////////////////////////////////////////////////////////////////////////////
-	//		add an object and make it move					//
-	//////////////////////////////////////////////////////////////////////////////////	
-	var geometry	= new THREE.CubeGeometry( 1, 1, 1);
-	var material	= new THREE.MeshNormalMaterial();
-	var mesh	= new THREE.Mesh( geometry, material );
-	scene.add( mesh );
+	//		add a ground							//
+	//////////////////////////////////////////////////////////////////////////////////
 	
-	updateFcts.push(function(delta, now){
-		// mesh.rotation.x += 1 * delta;
-		// mesh.rotation.y += 2 * delta;		
+	var groundMesh	= new THREEx.GrassGround()
+	scene.add(groundMesh)
+	groundMesh.scale.multiplyScalar(6)
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//		comment								//
+	//////////////////////////////////////////////////////////////////////////////////
+	
+	var alexaDomains= [
+		"google.com",
+		"facebook.com",
+		"youtube.com",
+		"yahoo.com",
+		"baidu.com",
+		"wikipedia.org",
+		"qq.com",
+		"live.com",
+		"linkedin.com",
+		"amazon.com",
+	];
+	
+	alexaDomains.forEach(function(alexaDomain, rank){
+		var height	= alexaDomains.length - rank
+		height		= Math.log(Math.log(height))
+		height		+= 1
+		buildDomainTower(alexaDomain, height)
 	})
-	
+
 	//////////////////////////////////////////////////////////////////////////////////
 	//		Camera Controls							//
 	//////////////////////////////////////////////////////////////////////////////////
@@ -35,7 +105,7 @@ require([], function(){
 	}, false)
 	updateFcts.push(function(delta, now){
 		camera.position.x += (mouse.x*5 - camera.position.x) * (delta*3)
-		camera.position.y += (mouse.y*5 - camera.position.y) * (delta*3)
+		camera.position.y += (mouse.y*5 - camera.position.y+4) * (delta*3)
 		camera.lookAt( scene.position )
 	})
 
